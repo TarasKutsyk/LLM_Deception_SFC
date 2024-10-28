@@ -1,8 +1,6 @@
 # %%[markdown]
 # # Patching Gemma-9b-it
 # Idea: Use Activation Patching to identify the important layers for lying detection.
-# Todo: Double check why the semantic groups truth_related and lie_related have the same effect values in the plot. 
-# Todo: Check also all the other groups, if the differ, or if there is a mistake. 
 
 # %%
 import transformer_lens as tl
@@ -60,7 +58,7 @@ def sample_dataset(start_idx=0, end_idx=-1, clean_dataset=clean_dataset, corrupt
     
     return return_values
 
-test_dataset = sample_dataset(start_idx=0, end_idx=2)
+test_dataset = sample_dataset(start_idx=0, end_idx=300)
 
 # 0 = Clean Prompt
 # 1 = Corrupted Prompt
@@ -123,6 +121,7 @@ def get_semantic_groups(model, clean_tokens, corrupt_tokens):
     semantic_groups = {
         'truth_lie_related': [('incorrect', 'correct'), ('correctly', 'lie')],
         'consequences': [('killed', 'killed')],
+        'sentence_structure': [('surviving', 'surviving'),('.','.'),(':',':')],
         #'consequence': [('killed', 'surviving')],
         #'intent': [('strategy', 'strategy')],  # same word if no change
         #'question': [('question', 'question'), ('?', '?')],
@@ -288,12 +287,12 @@ def mc_logit_diff_batch(logits, last_positions, answer_tokens, is_corrupted=Fals
             # (positive value means model prefers truth)
             diff = correct_logit - highest_incorrect
         
-        if i < 3:  # Debug printing
-            print(f"\nPredictions for sequence {i} at position {last_positions[i]}")
-            print(f"  Truth answer ({model.to_string(torch.tensor([answer_tokens[0]]))}): {correct_logit:.4f}")
-            print(f"  Highest incorrect: {highest_incorrect:.4f}")
-            print(f"  Difference ({'corrupted' if is_corrupted else 'clean'}): {diff:.4f}")
-            print(f"  Model prefers: {'lying' if diff > 0 and is_corrupted else 'truth'}")
+        # if i < 3:  # Debug printing
+        #     print(f"\nPredictions for sequence {i} at position {last_positions[i]}")
+        #     print(f"  Truth answer ({model.to_string(torch.tensor([answer_tokens[0]]))}): {correct_logit:.4f}")
+        #     print(f"  Highest incorrect: {highest_incorrect:.4f}")
+        #     print(f"  Difference ({'corrupted' if is_corrupted else 'clean'}): {diff:.4f}")
+        #     print(f"  Model prefers: {'lying' if diff > 0 and is_corrupted else 'truth'}")
         
         results.append(diff)
     
@@ -348,13 +347,13 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
     }
 
     for layer in tqdm(range(model.cfg.n_layers), desc="Processing layers"):
-        print(f"\nProcessing layer {layer}")
+        tqdm.write(f"\nProcessing layer {layer}")
         
         for group_name, positions in semantic_groups.items():
             if not positions:
                 continue
             
-            print(f"\n  Processing group: {group_name} with positions: {positions}")
+            tqdm.write(f"\n  Processing group: {group_name} with positions: {positions}")
             
             def patch_group_attention(attn_out, hook, clean_cache, positions):
                 """
@@ -408,11 +407,16 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
                 return patched
 
             # Create closure to pass positions to patch functions
+            # This is necessary because the patch functions need access to the clean cache and positions
+            # Hook Function from run_with_hooks does not allow to add additional arguments in this case
+            # we need to define a new function that takes the additional arguments and returns a lambda function
+            # that takes the attn_out and hook and calls the patch function with the additional arguments
+            
             def make_patch_hook(patch_fn, clean_cache, positions):
                 return lambda attn_out, hook: patch_fn(attn_out, hook, clean_cache, positions)
             
             # Patch attention
-            print("    Patching attention...")
+            tqdm.write("    Patching attention...")
             with torch.no_grad():
                 attn_hooks = [(
                     f"blocks.{layer}.hook_attn_out",
@@ -431,7 +435,7 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
                     group_effects[group_name]['attn'][layer, i] = effect
 
             # Patch MLP
-            print("    Patching MLP...")
+            tqdm.write("    Patching MLP...")
             with torch.no_grad():
                 mlp_hooks = [(
                     f"blocks.{layer}.hook_mlp_out",
@@ -450,7 +454,7 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
                     group_effects[group_name]['mlp'][layer, i] = effect
 
             # Patch residual
-            print("    Patching residual...")
+            tqdm.write("    Patching residual...")
             with torch.no_grad():
                 residual_hooks = [(
                     f"blocks.{layer}.hook_resid_post",
@@ -470,7 +474,9 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
 
             torch.cuda.empty_cache()
 
+
     # Average effects across batch
+    
     for group_name in group_effects:
         group_effects[group_name]['attn'] = group_effects[group_name]['attn'].mean(dim=1)
         group_effects[group_name]['mlp'] = group_effects[group_name]['mlp'].mean(dim=1)
@@ -803,8 +809,10 @@ def analyze_semantic_effects(model, test_dataset):
         if batch_effects is not None:
             all_group_effects.append(batch_effects)
     
+    
     # Aggregate results across batches
     aggregated_effects = {}
+    
     for group_name in all_group_effects[0].keys():
         aggregated_effects[group_name] = {
             'attn': {
@@ -821,25 +829,15 @@ def analyze_semantic_effects(model, test_dataset):
             }
         }
     
-    return aggregated_effects, semantic_groups
+    return aggregated_effects, semantic_groups, all_group_effects
 
 # %%
-group_effects, semantic_groups = analyze_semantic_effects(model, test_dataset)
+group_effects, semantic_groups, all_group_effects = analyze_semantic_effects(model, test_dataset)
 # %%
 # Create visualization and save results
 print("\nCreating visualization and saving results...")
 fig = save_and_display_results(group_effects, semantic_groups, model)
-
-
-# %%
-
 fig.show()
-
-
-
-
-
-
 
 
 

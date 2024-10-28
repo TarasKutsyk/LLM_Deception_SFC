@@ -34,3 +34,20 @@ Group: consequences
   Average Attention Effect: 0.0000
   Average MLP Effect: 0.0004
   Average Residual Effect: 0.0158
+
+Group: sentence_structure
+  Top Attention Layers:
+    Layer 18: 0.1152
+    Layer 17: 0.0771
+    Layer 16: 0.0583
+  Top MLP Layers:
+    Layer 14: 0.5000
+    Layer 15: 0.2305
+    Layer 13: 0.2305
+  Top Residual Layers:
+    Layer 19: 0.5000
+    Layer 17: 0.5000
+    Layer 18: 0.5000
+  Average Attention Effect: 0.0090
+  Average MLP Effect: 0.0385
+  Average Residual Effect: 0.1046
