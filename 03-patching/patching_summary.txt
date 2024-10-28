@@ -1,121 +1,36 @@
 === Semantic Causal Patching Analysis Results ===
 
 
-Group: truth_related
+Group: truth_lie_related
   Top Attention Layers:
-    Layer 14: 0.0422
-    Layer 5: 0.0404
-    Layer 0: 0.0396
+    Layer 17: 0.1152
+    Layer 19: 0.1152
+    Layer 13: 0.1152
   Top MLP Layers:
-    Layer 14: 0.1017
-    Layer 12: 0.0892
-    Layer 9: 0.0831
+    Layer 17: 0.1543
+    Layer 14: 0.1152
+    Layer 4: 0.1152
   Top Residual Layers:
-    Layer 13: 0.4896
-    Layer 12: 0.4699
-    Layer 14: 0.4334
-  Average Attention Effect: 0.0118
-  Average MLP Effect: 0.0232
-  Average Residual Effect: 0.1308
+    Layer 6: 0.5000
+    Layer 7: 0.5000
+    Layer 0: 0.5000
+  Average Attention Effect: 0.0112
+  Average MLP Effect: 0.0164
+  Average Residual Effect: 0.1985
 
-Group: lie_related
-  Top Attention Layers:
-    Layer 14: 0.0422
-    Layer 5: 0.0404
-    Layer 0: 0.0396
-  Top MLP Layers:
-    Layer 14: 0.1017
-    Layer 12: 0.0892
-    Layer 9: 0.0831
-  Top Residual Layers:
-    Layer 13: 0.4896
-    Layer 12: 0.4699
-    Layer 14: 0.4334
-  Average Attention Effect: 0.0118
-  Average MLP Effect: 0.0232
-  Average Residual Effect: 0.1308
-
-Group: consequence
-  Top Attention Layers:
-    Layer 16: 0.0742
-    Layer 17: 0.0631
-    Layer 0: 0.0430
-  Top MLP Layers:
-    Layer 3: 0.0437
-    Layer 10: 0.0389
-    Layer 1: 0.0353
-  Top Residual Layers:
-    Layer 17: 0.0666
-    Layer 0: 0.0430
-    Layer 13: 0.0413
-  Average Attention Effect: 0.0147
-  Average MLP Effect: 0.0110
-  Average Residual Effect: 0.0133
-
-Group: intent
+Group: consequences
   Top Attention Layers:
     Layer 41: 0.0000
     Layer 40: 0.0000
     Layer 39: 0.0000
   Top MLP Layers:
+    Layer 3: 0.0167
     Layer 41: 0.0000
-    Layer 40: 0.0000
     Layer 39: 0.0000
   Top Residual Layers:
-    Layer 41: 0.0000
-    Layer 40: 0.0000
-    Layer 39: 0.0000
+    Layer 11: 0.1543
+    Layer 13: 0.1543
+    Layer 12: 0.1543
   Average Attention Effect: 0.0000
-  Average MLP Effect: 0.0000
-  Average Residual Effect: 0.0000
-
-Group: question
-  Top Attention Layers:
-    Layer 9: 0.0564
-    Layer 10: 0.0531
-    Layer 12: 0.0472
-  Top MLP Layers:
-    Layer 13: 0.1226
-    Layer 18: 0.0691
-    Layer 7: 0.0690
-  Top Residual Layers:
-    Layer 0: 0.2541
-    Layer 6: 0.1364
-    Layer 7: 0.1272
-  Average Attention Effect: 0.0148
-  Average MLP Effect: 0.0193
-  Average Residual Effect: 0.0428
-
-Group: answer
-  Top Attention Layers:
-    Layer 3: 0.0970
-    Layer 6: 0.0762
-    Layer 5: 0.0721
-  Top MLP Layers:
-    Layer 5: 0.0720
-    Layer 8: 0.0701
-    Layer 2: 0.0699
-  Top Residual Layers:
-    Layer 2: 0.1665
-    Layer 1: 0.1593
-    Layer 0: 0.1337
-  Average Attention Effect: 0.0188
-  Average MLP Effect: 0.0209
-  Average Residual Effect: 0.0328
-
-Group: user
-  Top Attention Layers:
-    Layer 41: 0.0000
-    Layer 40: 0.0000
-    Layer 39: 0.0000
-  Top MLP Layers:
-    Layer 41: 0.0000
-    Layer 40: 0.0000
-    Layer 39: 0.0000
-  Top Residual Layers:
-    Layer 41: 0.0000
-    Layer 40: 0.0000
-    Layer 39: 0.0000
-  Average Attention Effect: 0.0000
-  Average MLP Effect: 0.0000
-  Average Residual Effect: 0.0000
+  Average MLP Effect: 0.0004
+  Average Residual Effect: 0.0158

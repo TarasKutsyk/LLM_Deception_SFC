@@ -1,6 +1,8 @@
 # %%[markdown]
 # # Patching Gemma-9b-it
 # Idea: Use Activation Patching to identify the important layers for lying detection.
+# Todo: Double check why the semantic groups truth_related and lie_related have the same effect values in the plot. 
+# Todo: Check also all the other groups, if the differ, or if there is a mistake. 
 
 # %%
 import transformer_lens as tl
@@ -58,7 +60,7 @@ def sample_dataset(start_idx=0, end_idx=-1, clean_dataset=clean_dataset, corrupt
     
     return return_values
 
-test_dataset = sample_dataset(start_idx=0, end_idx=10)
+test_dataset = sample_dataset(start_idx=0, end_idx=2)
 
 # 0 = Clean Prompt
 # 1 = Corrupted Prompt
@@ -112,18 +114,22 @@ def get_semantic_groups(model, clean_tokens, corrupt_tokens):
     """
     Group tokens into semantic categories with proper BOS token handling.
     """
+    # Ensure tokens are 2D tensors
+    if clean_tokens.dim() == 1:
+        clean_tokens = clean_tokens.unsqueeze(0)
+    if corrupt_tokens.dim() == 1:
+        corrupt_tokens = corrupt_tokens.unsqueeze(0)
+        
     semantic_groups = {
-        'truth_related': ['correct', 'truth', 'true'],
-        'lie_related': ['lying', 'incorrect', 'false'],
-        'consequence': ['killed', 'surviving', 'chance'],
-        'intent': ['strategy', 'intents', 'help'],
-        'question': ['question', '?'],
-        'answer': ['answer', ':'],
-        'user': ['user', 'captive']
+        'truth_lie_related': [('incorrect', 'correct'), ('correctly', 'lie')],
+        'consequences': [('killed', 'killed')],
+        #'consequence': [('killed', 'surviving')],
+        #'intent': [('strategy', 'strategy')],  # same word if no change
+        #'question': [('question', 'question'), ('?', '?')],
+        #'answer': [('answer', 'answer'), (':', ':')],
+        #'user': [('user', 'user'), ('captive', 'captive')]
     }
-    
-    token_positions = {}
-    
+
     def get_token_ids(word):
         """Get token IDs without BOS token."""
         tokens = model.to_tokens(word)[0]
@@ -142,99 +148,68 @@ def get_semantic_groups(model, clean_tokens, corrupt_tokens):
                 positions.extend(range(i, i+m))
         return positions
     
-    print("\nTokenization analysis:")
-    
-    # Ensure clean_tokens and corrupt_tokens are 2D
-    if clean_tokens.dim() == 1:
-        clean_tokens = clean_tokens.unsqueeze(0)
-    if corrupt_tokens.dim() == 1:
-        corrupt_tokens = corrupt_tokens.unsqueeze(0)
-    
-    for group_name, keywords in semantic_groups.items():
-        positions = []
-        print(f"\nProcessing group: {group_name}")
-        
-        for keyword in keywords:
-            # Get token IDs without BOS
-            keyword_tokens = get_token_ids(keyword)
-            print(f"  Keyword '{keyword}' tokens: {keyword_tokens.tolist()}")
-            
-            # Search in clean tokens (skip BOS token)
-            clean_positions = find_subsequence(clean_tokens[0][1:], keyword_tokens)
-            if clean_positions:
-                # Adjust positions to account for skipped BOS token
-                clean_positions = [p + 1 for p in clean_positions]
-                print(f"    Found in clean at positions: {clean_positions}")
-                print(f"    Tokens: {[model.to_string(clean_tokens[0, p:p+1]) for p in clean_positions]}")
-                positions.extend(clean_positions)
-            
-            # Search in corrupt tokens (skip BOS token)
-            corrupt_positions = find_subsequence(corrupt_tokens[0][1:], keyword_tokens)
-            if corrupt_positions:
-                # Adjust positions to account for skipped BOS token
-                corrupt_positions = [p + 1 for p in corrupt_positions]
-                print(f"    Found in corrupt at positions: {corrupt_positions}")
-                print(f"    Tokens: {[model.to_string(corrupt_tokens[0, p:p+1]) for p in corrupt_positions]}")
-                positions.extend(corrupt_positions)
-        
-        token_positions[group_name] = sorted(list(set(positions)))
-        print(f"  Final positions for {group_name}: {token_positions[group_name]}")
-        if token_positions[group_name]:
-            print("  Final tokens:", [model.to_string(clean_tokens[0, p:p+1]) for p in token_positions[group_name]])
-    
-    # Verify we found semantic groups
-    total_positions = sum(len(pos) for pos in token_positions.values())
-    print(f"\nTotal positions found: {total_positions}")
-    
-    if total_positions == 0:
-        print("\nWARNING: Still no positions found! Adding manual token search...")
-        
-        # Manual search for specific tokens in the sequence
-        clean_sequence = [model.to_string(clean_tokens[0, i:i+1]) for i in range(clean_tokens.shape[1])]
-        print("\nFull token sequence:")
-        for i, token in enumerate(clean_sequence):
-            print(f"Position {i}: {token}")
-        
-        # Add positions based on exact token matches
-        for i, token in enumerate(clean_sequence):
-            token_lower = token.lower().strip()
-            for group_name, keywords in semantic_groups.items():
-                if any(keyword.lower() in token_lower for keyword in keywords):
-                    if group_name not in token_positions:
-                        token_positions[group_name] = []
-                    token_positions[group_name].append(i)
-    
-    return token_positions
+    # print("\nTokenization analysis:")
+    # print(f"Clean tokens shape: {clean_tokens.shape}")
+    # print(f"Corrupt tokens shape: {corrupt_tokens.shape}")
 
-def test_token_matching(model, word):
-    """
-    Test token matching for a specific word.
-    """
-    print(f"\nTesting token matching for '{word}':")
-    
-    # Get tokens with BOS
-    tokens_with_bos = model.to_tokens(word)
-    print(f"Tokens with BOS: {tokens_with_bos.tolist()}")
-    print(f"Decoded with BOS: {model.to_string(tokens_with_bos[0])}")
-    
-    # Get tokens without BOS
-    text = f" {word}"  # Add space to prevent BOS
-    tokens_no_bos = model.to_tokens(text)
-    print(f"Tokens without BOS: {tokens_no_bos.tolist()}")
-    print(f"Decoded without BOS: {model.to_string(tokens_no_bos[0])}")
-    
-    return tokens_with_bos, tokens_no_bos
+    token_mappings = {}  # Will store {clean_pos: corrupt_pos} mappings
+    semantic_positions = {group: [] for group in semantic_groups}
 
-# Test the token matching
-def run_token_tests(model):
-    """
-    Run token matching tests on key words.
-    """
-    test_words = ['correct', 'incorrect', 'lying', 'truth', 'killed', 'surviving']
-    print("\nRunning token matching tests...")
+    for group_name, keyword_pairs in semantic_groups.items():
+        # print(f"\nProcessing group: {group_name}")
+        
+        for clean_word, corrupt_word in keyword_pairs:
+            # Get token IDs for both versions
+            clean_tokens_ids = get_token_ids(clean_word)
+            corrupt_tokens_ids = get_token_ids(corrupt_word)
+            
+            # Find positions in both sequences
+            try:
+                clean_pos = find_subsequence(clean_tokens[0][1:], clean_tokens_ids)
+                corrupt_pos = find_subsequence(corrupt_tokens[0][1:], corrupt_tokens_ids)
+                
+                # Adjust for BOS token
+                clean_pos = [p + 1 for p in clean_pos]
+                corrupt_pos = [p + 1 for p in corrupt_pos]
+                
+                if clean_pos and corrupt_pos:
+                    # If we have same number of occurrences, map them in order
+                    if len(clean_pos) == len(corrupt_pos):
+                        for c_pos, d_pos in zip(clean_pos, corrupt_pos):
+                            token_mappings[c_pos] = d_pos
+                            semantic_positions[group_name].append((c_pos, d_pos))
+                    #        print(f"Mapped '{clean_word}' at {c_pos} to '{corrupt_word}' at {d_pos}")
+                    else:
+                        print(f"Warning: Unequal occurrences of '{clean_word}' ({len(clean_pos)}) "
+                              f"and '{corrupt_word}' ({len(corrupt_pos)})")
+            except Exception as e:
+                print(f"Error processing words '{clean_word}' and '{corrupt_word}': {str(e)}")
+                continue
     
-    for word in test_words:
-        with_bos, no_bos = test_token_matching(model, word)
+    # Validate mappings
+    # if token_mappings:
+    #     try:
+    #         clean_tokens_str = [model.to_string(clean_tokens[0, i:i+1]) for i in token_mappings.keys()]
+    #         corrupt_tokens_str = [model.to_string(corrupt_tokens[0, i:i+1]) for i in token_mappings.values()]
+    #         print("\nToken mapping validation:")
+    #         for (c_pos, d_pos), c_tok, d_tok in zip(token_mappings.items(), clean_tokens_str, corrupt_tokens_str):
+    #             print(f"Clean token at {c_pos}: '{c_tok}' → Corrupt token at {d_pos}: '{d_tok}'")
+    #     except Exception as e:
+    #         print(f"Error during token mapping validation: {str(e)}")
+    # else:
+    #     print("\nNo token mappings found to validate")
+    
+    return semantic_positions
+    
+
+
+get_semantic_groups(model, clean_tokens, corrupt_tokens)
+
+# %%
+
+
+# %%
+
 
 def get_last_real_positions(attention_masks):
     """
@@ -248,7 +223,6 @@ def get_last_real_positions(attention_masks):
     if attention_masks.dim() == 1:
         attention_masks = attention_masks.unsqueeze(0)
     return attention_masks.sum(dim=1) - 1
-
 
 
 ## Logit Diff Batch
@@ -294,8 +268,11 @@ def mc_logit_diff_batch(logits, last_positions, answer_tokens, is_corrupted=Fals
     
     assert len(answer_tokens) == 5, "Must provide exactly 5 answer tokens"
     
+    # Loop through each sequence in the batch
     for i in range(batch_size):
+        # Get logits for the target position (last token) of this sequence
         target_token_logits = logits[i, last_positions[i]]
+        # Extract logits only for the multiple choice answer tokens (5 tokens total)
         mc_logits = target_token_logits[answer_tokens]
         
         correct_logit = mc_logits[0]  # First token is truth answer
@@ -342,6 +319,8 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
     
     semantic_groups = get_semantic_groups(model, clean_tokens, corrupt_tokens)
     
+    print(semantic_groups)
+    
     if not any(positions for positions in semantic_groups.values()):
         print("Warning: No semantic groups found! Check token matching logic.")
         return None, semantic_groups
@@ -377,31 +356,68 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
             
             print(f"\n  Processing group: {group_name} with positions: {positions}")
             
-            def patch_group_attention(attn_out, hook):
-                clean_attn = clean_cache[f"blocks.{layer}.hook_attn_out"].to(attn_out.device)
+            def patch_group_attention(attn_out, hook, clean_cache, positions):
+                """
+                Patch attention outputs using position mappings.
+                
+                Args:
+                    positions: List of tuples [(clean_pos, corrupt_pos), ...] indicating mapping positions
+                """
+                clean_attn = clean_cache[hook.name].to(attn_out.device)
                 patched = attn_out.clone()
+                
+                # Create a mapping mask
                 mask = torch.zeros_like(patched, dtype=torch.bool)
-                mask[:, positions] = True
-                return torch.where(mask, clean_attn, patched)
+                for clean_pos, corrupt_pos in positions:
+                    # When patching corrupted -> clean, we use corrupt_pos as index and clean_pos as source
+                    mask[:, corrupt_pos] = True
+                    patched[:, corrupt_pos] = clean_attn[:, clean_pos]
+                
+                return patched
 
-            def patch_group_mlp(mlp_out, hook):
-                clean_mlp = clean_cache[f"blocks.{layer}.hook_mlp_out"].to(mlp_out.device)
+            def patch_group_mlp(mlp_out, hook, clean_cache, positions):
+                """
+                Patch MLP outputs using position mappings.
+                """
+                clean_mlp = clean_cache[hook.name].to(mlp_out.device)
                 patched = mlp_out.clone()
+                
+                # Create a mapping mask
                 mask = torch.zeros_like(patched, dtype=torch.bool)
-                mask[:, positions] = True
-                return torch.where(mask, clean_mlp, patched)
+                for clean_pos, corrupt_pos in positions:
+                    # When patching corrupted -> clean, we use corrupt_pos as index and clean_pos as source
+                    mask[:, corrupt_pos] = True
+                    patched[:, corrupt_pos] = clean_mlp[:, clean_pos]
+                
+                return patched
 
-            def patch_group_residual(residual_out, hook):
-                clean_residual = clean_cache[f"blocks.{layer}.hook_resid_post"].to(residual_out.device)
+            def patch_group_residual(residual_out, hook, clean_cache, positions):
+                """
+                Patch residual outputs using position mappings.
+                """
+                clean_residual = clean_cache[hook.name].to(residual_out.device)
                 patched = residual_out.clone()
+                
+                # Create a mapping mask
                 mask = torch.zeros_like(patched, dtype=torch.bool)
-                mask[:, positions] = True
-                return torch.where(mask, clean_residual, patched)
+                for clean_pos, corrupt_pos in positions:
+                    # When patching corrupted -> clean, we use corrupt_pos as index and clean_pos as source
+                    mask[:, corrupt_pos] = True
+                    patched[:, corrupt_pos] = clean_residual[:, clean_pos]
+                
+                return patched
 
+            # Create closure to pass positions to patch functions
+            def make_patch_hook(patch_fn, clean_cache, positions):
+                return lambda attn_out, hook: patch_fn(attn_out, hook, clean_cache, positions)
+            
             # Patch attention
             print("    Patching attention...")
             with torch.no_grad():
-                attn_hooks = [(f"blocks.{layer}.hook_attn_out", patch_group_attention)]
+                attn_hooks = [(
+                    f"blocks.{layer}.hook_attn_out",
+                    make_patch_hook(patch_group_attention, clean_cache, positions)
+                )]
                 patched_logits = model.run_with_hooks(corrupt_tokens, fwd_hooks=attn_hooks)
                 attn_diffs = mc_logit_diff_batch(patched_logits, corrupt_last_positions, answer_tokens, is_corrupted=True)
                 
@@ -417,7 +433,10 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
             # Patch MLP
             print("    Patching MLP...")
             with torch.no_grad():
-                mlp_hooks = [(f"blocks.{layer}.hook_mlp_out", patch_group_mlp)]
+                mlp_hooks = [(
+                    f"blocks.{layer}.hook_mlp_out",
+                    make_patch_hook(patch_group_mlp, clean_cache, positions)
+                )]
                 patched_logits = model.run_with_hooks(corrupt_tokens, fwd_hooks=mlp_hooks)
                 mlp_diffs = mc_logit_diff_batch(patched_logits, corrupt_last_positions, answer_tokens, is_corrupted=True)
                 
@@ -433,7 +452,10 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
             # Patch residual
             print("    Patching residual...")
             with torch.no_grad():
-                residual_hooks = [(f"blocks.{layer}.hook_resid_post", patch_group_residual)]
+                residual_hooks = [(
+                    f"blocks.{layer}.hook_resid_post",
+                    make_patch_hook(patch_group_residual, clean_cache, positions)
+                )]
                 patched_logits = model.run_with_hooks(corrupt_tokens, fwd_hooks=residual_hooks)
                 residual_diffs = mc_logit_diff_batch(patched_logits, corrupt_last_positions, answer_tokens, is_corrupted=True)
                 
@@ -467,7 +489,11 @@ def visualize_semantic_effects(group_effects, model):
     
     fig = make_subplots(
         rows=3, cols=1,
-        subplot_titles=("Attention Effects by Semantic Group", "MLP Effects by Semantic Group", "Residual Effects by Semantic Group"),
+        subplot_titles=(
+            "Attention Effects by Semantic Group<br><sup>0=no effect, 0.5=uncertain, 1=complete effect</sup>", 
+            "MLP Effects by Semantic Group<br><sup>0=no effect, 0.5=uncertain, 1=complete effect</sup>", 
+            "Residual Effects by Semantic Group<br><sup>0=no effect, 0.5=uncertain, 1=complete effect</sup>"
+        ),
         vertical_spacing=0.15
     )
 
@@ -642,7 +668,7 @@ def visualize_semantic_effects(group_effects, model):
         height=1000,
         width=1200,
         title={
-            'text': 'Causal Effects by Semantic Group',
+            'text': 'Causal Effects by Semantic Group<br><sup>Effect Scale: 0=no effect, 0.5=uncertain, 1=complete effect</sup>',
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
@@ -662,7 +688,7 @@ def visualize_semantic_effects(group_effects, model):
     )
 
     # Update axes
-    for i in [1, 2]:
+    for i in [1, 2, 3]:  # Updated to include all three subplots
         fig.update_xaxes(
             title_text="Layer",
             gridcolor='lightgray',
@@ -670,7 +696,7 @@ def visualize_semantic_effects(group_effects, model):
             row=i, col=1
         )
         fig.update_yaxes(
-            title_text="Effect Strength",
+            title_text="Effect Strength (0=none, 0.5=uncertain, 1=complete)",
             range=[0, 1],
             gridcolor='lightgray',
             zerolinecolor='lightgray',
