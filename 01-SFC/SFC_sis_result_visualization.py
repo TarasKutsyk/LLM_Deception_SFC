@@ -467,8 +467,8 @@ def create_activation_visualization_plotly(data, K=10, group_padding=0.5, layer_
 
 # %%
 aggregation_type = AttributionAggregation.ALL_TOKENS
-THRESHOLD = 0.1
-NODES_PREFIX = 'resid_saes_128k'# 'resid_saes_128k'
+THRESHOLD = 0.01
+NODES_PREFIX = ''# 'resid_saes_128k'
 
 def get_nodes_fname(truthful_nodes=True, nodes_prefix=NODES_PREFIX):
     nodes_type = 'truthful' if truthful_nodes else 'deceptive'
@@ -502,8 +502,8 @@ node_scores_summary = summarize_contributing_components(truthful_nodes_scores, s
 node_scores_summary
 
 # %%
-PERCENTILE = 10
-fig = create_activation_visualization_plotly(truthful_nodes_scores, K=PERCENTILE, group_padding=1, 
+PERCENTILE = 20
+fig = create_activation_visualization_plotly(truthful_nodes_scores, K=PERCENTILE, group_padding=0.5, 
                                              layer_padding=1)
 
 # Display the figure
@@ -524,7 +524,7 @@ print(f"The interactive figure has been saved as {output_file}.")
 # %%
 aggregation_type = AttributionAggregation.ALL_TOKENS
 
-nodes_prefix = 'correct_answer_metric_resid_saes_128K' # NODES_PREFIX
+nodes_prefix = '' # NODES_PREFIX
 
 deceptive_nodes_fname = get_nodes_fname(truthful_nodes=False, nodes_prefix=nodes_prefix)
 
@@ -543,9 +543,9 @@ deceptive_nodes_scores
 summarize_contributing_components(deceptive_nodes_scores, show_layers=True)
 
 # %%
-PERCENTILE = 25
+PERCENTILE = 20
 
-fig = create_activation_visualization_plotly(deceptive_nodes_scores, K=PERCENTILE, group_padding=1, 
+fig = create_activation_visualization_plotly(deceptive_nodes_scores, K=PERCENTILE, group_padding=0.5, 
                                              layer_padding=1)
 
 # Display the figure
