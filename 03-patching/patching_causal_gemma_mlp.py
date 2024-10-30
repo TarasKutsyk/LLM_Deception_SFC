@@ -43,22 +43,35 @@ clean_dataset, corrupted_dataset = dataloader.get_clean_corrupted_datasets(token
 # %%
 # Sample Dataset
 
-def sample_dataset(start_idx=0, end_idx=-1, clean_dataset=clean_dataset, corrupted_dataset=corrupted_dataset):
+def sample_dataset(n_samples=300, clean_dataset=clean_dataset, corrupted_dataset=corrupted_dataset):
     """
-    Sample dataset including answer token information.
+    Randomly sample n_samples from the dataset including answer token information.
+    
+    Args:
+        n_samples: Number of samples to randomly select
+        clean_dataset: Clean dataset
+        corrupted_dataset: Corrupted dataset
     """
+    # Get total dataset size
+    total_size = len(clean_dataset['prompt'])
+    
+    # Generate random indices
+    indices = torch.randperm(total_size)[:n_samples]
+    
     return_values = []
     
     # Original keys
     for key in ['prompt', 'answer', 'answer_pos', 'attention_mask', 'special_token_mask']:
         if clean_dataset is not None:
-            return_values.append(clean_dataset[key][start_idx:end_idx])
+            return_values.append(clean_dataset[key][indices])
         if corrupted_dataset is not None:
-            return_values.append(corrupted_dataset[key][start_idx:end_idx])
+            return_values.append(corrupted_dataset[key][indices])
     
     return return_values
 
-test_dataset = sample_dataset(start_idx=0, end_idx=300)
+# Sample 300 random cases
+test_dataset = sample_dataset(n_samples=2)
+num_samples = len(test_dataset[0])
 
 # 0 = Clean Prompt
 # 1 = Corrupted Prompt
@@ -95,8 +108,8 @@ corrupt_prompt = test_dataset[1][0]
 
 # %%
 
-print(model.to_string(clean_prompt))
-print(model.to_string(corrupt_prompt))
+print(model.to_str_tokens(clean_prompt))
+print(model.to_str_tokens(corrupt_prompt))
 
 # %%
 # Test tokenization
@@ -119,9 +132,10 @@ def get_semantic_groups(model, clean_tokens, corrupt_tokens):
         corrupt_tokens = corrupt_tokens.unsqueeze(0)
         
     semantic_groups = {
-        'truth_lie_related': [('incorrect', 'correct'), ('correctly', 'lie')],
+        # THis is incorret must incorrectly but the issue is that the tokenizer generates to tokens from it?
+        'truth_lie_related': [('incorrect', 'correct'), ('correctly', 'incorrect')],
         'consequences': [('killed', 'killed')],
-        'sentence_structure': [('surviving', 'surviving'),('.','.'),(':',':')],
+        #'sentence_structure': [('surviving', 'surviving'),('.','.'),(':',':')],
         #'consequence': [('killed', 'surviving')],
         #'intent': [('strategy', 'strategy')],  # same word if no change
         #'question': [('question', 'question'), ('?', '?')],
@@ -423,7 +437,7 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
                     make_patch_hook(patch_group_attention, clean_cache, positions)
                 )]
                 patched_logits = model.run_with_hooks(corrupt_tokens, fwd_hooks=attn_hooks)
-                attn_diffs = mc_logit_diff_batch(patched_logits, corrupt_last_positions, answer_tokens, is_corrupted=True)
+                attn_diffs = mc_logit_diff_batch(patched_logits, corrupt_last_positions, answer_tokens, is_corrupted=False)
                 
                 # Calculate and store effects for each sequence
                 for i in range(len(clean_last_positions)):
@@ -442,7 +456,7 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
                     make_patch_hook(patch_group_mlp, clean_cache, positions)
                 )]
                 patched_logits = model.run_with_hooks(corrupt_tokens, fwd_hooks=mlp_hooks)
-                mlp_diffs = mc_logit_diff_batch(patched_logits, corrupt_last_positions, answer_tokens, is_corrupted=True)
+                mlp_diffs = mc_logit_diff_batch(patched_logits, corrupt_last_positions, answer_tokens, is_corrupted=False)
                 
                 # Calculate and store effects for each sequence
                 for i in range(len(clean_last_positions)):
@@ -461,7 +475,7 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
                     make_patch_hook(patch_group_residual, clean_cache, positions)
                 )]
                 patched_logits = model.run_with_hooks(corrupt_tokens, fwd_hooks=residual_hooks)
-                residual_diffs = mc_logit_diff_batch(patched_logits, corrupt_last_positions, answer_tokens, is_corrupted=True)
+                residual_diffs = mc_logit_diff_batch(patched_logits, corrupt_last_positions, answer_tokens, is_corrupted=False)
                 
                 # Calculate and store effects for each sequence
                 for i in range(len(clean_last_positions)):
@@ -471,6 +485,7 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
                     else:
                         effect = 0.5
                     group_effects[group_name]['residual'][layer, i] = effect
+                    
 
             torch.cuda.empty_cache()
 
@@ -483,7 +498,7 @@ def perform_semantic_causal_patching(model, clean_tokens, corrupt_tokens,
         group_effects[group_name]['residual'] = group_effects[group_name]['residual'].mean(dim=1)
     return group_effects, semantic_groups
 
-def visualize_semantic_effects(group_effects, model):
+def visualize_semantic_effects(group_effects, model, num_samples):
     """
     Create visualization with error bands for semantic group causal effects.
     """
@@ -674,7 +689,7 @@ def visualize_semantic_effects(group_effects, model):
         height=1000,
         width=1200,
         title={
-            'text': 'Causal Effects by Semantic Group<br><sup>Effect Scale: 0=no effect, 0.5=uncertain, 1=complete effect</sup>',
+            'text': 'Causal Effects by Semantic Group (Num Samples: {num_samples})<br><sup>Effect Scale: 0=no effect, 0.5=uncertain, 1=complete effect</sup>',
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
@@ -711,15 +726,17 @@ def visualize_semantic_effects(group_effects, model):
 
     return fig
 
-def save_and_display_results(group_effects, semantic_groups, model, save_path="patching_results.html"):
+def save_and_display_results(group_effects, semantic_groups, model, num_samples, save_path="patching_results.html"):
     """
     Save and display the results of the analysis.
     """
     print("\nPreparing results summary...")
     
+    save_path = save_path.replace(".html", f"_{num_samples}.html")
+    
     # Create detailed summary
     summary = []
-    summary.append("=== Semantic Causal Patching Analysis Results ===\n")
+    summary.append(f"=== Semantic Causal Patching Analysis Results (Num Samples: {num_samples}) ===\n")
     
     for group_name, positions in semantic_groups.items():
         summary.append(f"\nGroup: {group_name}")
@@ -758,14 +775,14 @@ def save_and_display_results(group_effects, semantic_groups, model, save_path="p
             summary.append("  No effects calculated for this group")
     
     # Save summary to file
-    with open("patching_summary.txt", "w") as f:
+    with open(f"patching_summary_{num_samples}.txt", "w") as f:
         f.write("\n".join(summary))
     
     # Create and save visualization
-    fig = visualize_semantic_effects(group_effects, model)
+    fig = visualize_semantic_effects(group_effects, model, num_samples)
     if fig is not None:
         fig.write_html(save_path)
-        print(f"\nResults saved to {save_path} and patching_summary.txt")
+        print(f"\nResults saved to {save_path} and patching_summary_{num_samples}.txt")
         return fig
     else:
         print("\nNo visualization created due to missing effects")
@@ -836,10 +853,12 @@ group_effects, semantic_groups, all_group_effects = analyze_semantic_effects(mod
 # %%
 # Create visualization and save results
 print("\nCreating visualization and saving results...")
-fig = save_and_display_results(group_effects, semantic_groups, model)
-fig.show()
+fig = save_and_display_results(group_effects, semantic_groups, model, num_samples)
+#fig.show()
 
 
 
 
+# %%
+#fig.show()
 # %%

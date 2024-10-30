@@ -1,0 +1,36 @@
+=== Semantic Causal Patching Analysis Results (Num Samples: 5) ===
+
+
+Group: truth_lie_related
+  Top Attention Layers:
+    Layer 0: 0.4711
+    Layer 21: 0.4633
+    Layer 18: 0.4609
+  Top MLP Layers:
+    Layer 21: 0.4801
+    Layer 7: 0.4754
+    Layer 6: 0.4734
+  Top Residual Layers:
+    Layer 9: 0.4973
+    Layer 8: 0.4594
+    Layer 12: 0.3566
+  Average Attention Effect: 0.4468
+  Average MLP Effect: 0.4430
+  Average Residual Effect: 0.0811
+
+Group: consequences
+  Top Attention Layers:
+    Layer 9: 0.4863
+    Layer 12: 0.4633
+    Layer 19: 0.4609
+  Top MLP Layers:
+    Layer 15: 0.4773
+    Layer 12: 0.4688
+    Layer 18: 0.4660
+  Top Residual Layers:
+    Layer 17: 0.0677
+    Layer 7: 0.0283
+    Layer 16: 0.0210
+  Average Attention Effect: 0.4531
+  Average MLP Effect: 0.4544
+  Average Residual Effect: 0.0061

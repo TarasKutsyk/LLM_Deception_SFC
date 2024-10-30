@@ -1,0 +1,354 @@
+
+<html>
+<head>
+<style>
+    .table {
+        width: 100%;
+        margin: 25px 0;
+        border-collapse: collapse;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+    }
+    .table th {
+        background-color: #f8f9fa;
+        padding: 12px;
+        text-align: left;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .table td {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+        line-height: 1.4;
+    }
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(0,0,0,.05);
+    }
+    .table-hover tbody tr:hover {
+        background-color: rgba(0,0,0,.075);
+    }
+</style>
+</head>
+<body>
+<table class="dataframe table table-striped table-hover">
+  <thead>
+    <tr style="text-align: right;">
+      <th>layer</th>
+      <th>hook_point</th>
+      <th>node_id</th>
+      <th>score</th>
+      <th>explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>29</td>
+      <td>resid_post</td>
+      <td>8545</td>
+      <td>0.4707</td>
+      <td>tokens and symbols related to programming or coding syntax - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>25</td>
+      <td>resid_post</td>
+      <td>15410</td>
+      <td>0.4004</td>
+      <td>programming or technical terms related to data structures and operations - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>28</td>
+      <td>resid_post</td>
+      <td>3206</td>
+      <td>0.3730</td>
+      <td>mathematical expressions and notations - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>34</td>
+      <td>resid_post</td>
+      <td>1063</td>
+      <td>0.3242</td>
+      <td>technical terminology and identifiers related to programming or coding contexts - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>32</td>
+      <td>resid_post</td>
+      <td>1518</td>
+      <td>0.3164</td>
+      <td>references to digital devices and technology - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>30</td>
+      <td>resid_post</td>
+      <td>12918</td>
+      <td>0.3145</td>
+      <td>technical terminology and syntax used in programming or data formats - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>27</td>
+      <td>resid_post</td>
+      <td>2532</td>
+      <td>0.2559</td>
+      <td>structured data formats and XML or code-like syntax - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>31</td>
+      <td>resid_post</td>
+      <td>1126</td>
+      <td>0.2441</td>
+      <td>numerical data and references in structured formats - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>33</td>
+      <td>resid_post</td>
+      <td>1725</td>
+      <td>0.2344</td>
+      <td>numerical values and references to timeframes related to events or activities - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>26</td>
+      <td>resid_post</td>
+      <td>2899</td>
+      <td>0.2334</td>
+      <td>elements related to computer programming and technical specifications - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>19</td>
+      <td>resid_post</td>
+      <td>1145</td>
+      <td>0.2256</td>
+      <td>scientific terminology and concepts related to biological processes and medical conditions - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>35</td>
+      <td>resid_post</td>
+      <td>1063</td>
+      <td>0.2197</td>
+      <td>references to data structure definitions and fields in a coding or programming context - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>41</td>
+      <td>resid_post</td>
+      <td>8186</td>
+      <td>0.2051</td>
+      <td>references to specific medical conditions and related terms in technical contexts - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>mlp_out</td>
+      <td>error</td>
+      <td>0.1992</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>31</td>
+      <td>resid_post</td>
+      <td>9005</td>
+      <td>0.1885</td>
+      <td>terms and phrases related to healthcare interventions and studies - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>40</td>
+      <td>resid_post</td>
+      <td>15580</td>
+      <td>0.1836</td>
+      <td>scientific terms and concepts related to proteins and biochemical processes - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>31</td>
+      <td>resid_post</td>
+      <td>7007</td>
+      <td>0.1826</td>
+      <td>terms related to automotive diagnostics and their connection methods - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>41</td>
+      <td>resid_post</td>
+      <td>14229</td>
+      <td>0.1543</td>
+      <td>technical terms and symbols related to scientific or mathematical contexts - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>38</td>
+      <td>resid_post</td>
+      <td>14638</td>
+      <td>0.1465</td>
+      <td>complex financial terminology and numerical data - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>24</td>
+      <td>resid_post</td>
+      <td>15280</td>
+      <td>0.1436</td>
+      <td>references to banking and financial terms, particularly those related to deposits and accounts - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>36</td>
+      <td>resid_post</td>
+      <td>11029</td>
+      <td>0.1406</td>
+      <td>code-related keywords, particularly in the context of programming and data structure definitions - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>attn_z</td>
+      <td>error</td>
+      <td>0.1396</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>39</td>
+      <td>resid_post</td>
+      <td>12964</td>
+      <td>0.1387</td>
+      <td>specific scientific and technical terminology related to biological and medical concepts - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>resid_post</td>
+      <td>7629</td>
+      <td>0.1367</td>
+      <td>legal terms and concepts related to court proceedings and appeals - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>resid_post</td>
+      <td>error</td>
+      <td>0.1357</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>41</td>
+      <td>resid_post</td>
+      <td>123</td>
+      <td>0.1348</td>
+      <td>mathematical notation and logical expressions - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>23</td>
+      <td>mlp_out</td>
+      <td>error</td>
+      <td>0.1328</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>17</td>
+      <td>resid_post</td>
+      <td>error</td>
+      <td>0.1318</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>19</td>
+      <td>mlp_out</td>
+      <td>error</td>
+      <td>0.1289</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>resid_post</td>
+      <td>15096</td>
+      <td>0.1279</td>
+      <td>legal terminology and references in court cases - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>17</td>
+      <td>resid_post</td>
+      <td>8637</td>
+      <td>0.1250</td>
+      <td>legal terminology and concepts related to court proceedings - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>37</td>
+      <td>resid_post</td>
+      <td>5396</td>
+      <td>0.1201</td>
+      <td>JavaScript and programming-related syntax elements - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>31</td>
+      <td>resid_post</td>
+      <td>319</td>
+      <td>0.1182</td>
+      <td>copyright and licensing information related to software - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>38</td>
+      <td>resid_post</td>
+      <td>8575</td>
+      <td>0.1177</td>
+      <td>specific biochemistry and nutrition terms related to vitamins and minerals - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>27</td>
+      <td>resid_post</td>
+      <td>6600</td>
+      <td>0.1143</td>
+      <td>references to sports events, player statistics, and training details - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>41</td>
+      <td>resid_post</td>
+      <td>8976</td>
+      <td>0.1138</td>
+      <td>programming syntax and function calls - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>39</td>
+      <td>resid_post</td>
+      <td>9157</td>
+      <td>0.1133</td>
+      <td>significant geographical and political entities - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>38</td>
+      <td>resid_post</td>
+      <td>6619</td>
+      <td>0.1128</td>
+      <td>references to academic publications and legal citations - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>28</td>
+      <td>resid_post</td>
+      <td>15391</td>
+      <td>0.1123</td>
+      <td>mathematical expressions and notations - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>17</td>
+      <td>attn_z</td>
+      <td>error</td>
+      <td>0.1099</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>23</td>
+      <td>resid_post</td>
+      <td>3043</td>
+      <td>0.1084</td>
+      <td>content related to scientific research methodologies and data analysis - (gpt-4o-mini - johnny)</td>
+    </tr>
+    <tr>
+      <td>06</td>
+      <td>attn_z</td>
+      <td>error</td>
+      <td>0.1074</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>27</td>
+      <td>resid_post</td>
+      <td>error</td>
+      <td>0.1064</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>resid_post</td>
+      <td>9975</td>
+      <td>0.1006</td>
+      <td>rich descriptions of character emotions and interactions - (gpt-4o-mini - johnny)</td>
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>
