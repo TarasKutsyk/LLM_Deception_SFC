@@ -508,7 +508,7 @@ def create_activation_visualization_plotly(data, K=10, group_padding=0.5, layer_
 
     # Update layout
     fig.update_layout(
-        title='Node Activation Map',
+        title='SFC node (attr patching) scores map',
         xaxis=dict(
             showgrid=False,
             zeroline=False,
