@@ -201,6 +201,9 @@ def summarize_contributing_components(contributing_components, show_layers=False
 import numpy as np
 import plotly.graph_objects as go
 
+import numpy as np
+import plotly.graph_objects as go
+
 def create_activation_visualization_plotly(data, K=10, group_padding=0.5, layer_padding=1.5):
     """
     Creates an activation visualization using Plotly.
@@ -219,6 +222,13 @@ def create_activation_visualization_plotly(data, K=10, group_padding=0.5, layer_
     base_layer_spacing = 2.0
     layer_spacing = base_layer_spacing + layer_padding  # Base vertical spacing with added padding
     node_spacing = 1.0  # Minimal horizontal spacing between nodes to prevent overlap
+
+    # Define color scales for each hook point
+    hook_point_colorscales = {
+        'attn_z': 'Greens',
+        'mlp_out': 'Purples',
+        'resid_post': 'Blues'
+    }
 
     # Parse data
     layer_hook_nodes = {}
@@ -292,6 +302,15 @@ def create_activation_visualization_plotly(data, K=10, group_padding=0.5, layer_
                     groups = group_nodes_by_percentile(normal_nodes, K)
                     group_nodes.extend(groups)
 
+    # Calculate max total_score per hook_point for normalization
+    hook_point_max_scores = {}
+    for hook_point in hook_point_columns.keys():
+        relevant_groups = [g for g in group_nodes if g['hook_point'] == hook_point]
+        if relevant_groups:
+            hook_point_max_scores[hook_point] = max(g['total_score'] for g in relevant_groups)
+        else:
+            hook_point_max_scores[hook_point] = 1  # Prevent division by zero
+
     # Calculate positions with added padding
     positions = {}
     for layer in sorted(set(group['layer'] for group in group_nodes)):
@@ -308,96 +327,151 @@ def create_activation_visualization_plotly(data, K=10, group_padding=0.5, layer_
                     group['x'] = x
                     group['y'] = y
 
-    # Extract average scores for color mapping
-    total_scores = [group['total_score'] for group in group_nodes]
-    min_total_score = min(total_scores)
-    max_total_score = max(total_scores)
-    score_range = max_total_score - min_total_score if max_total_score != min_total_score else 1
-
     # Prepare data for Plotly
-    normal_x = []
-    normal_y = []
-    normal_text = []
-    normal_total_scores = []
-    error_x = []
-    error_y = []
-    error_text = []
-    error_total_scores = []
-
+    # Organize groups by node type and hook_point for separate traces
+    normal_groups = {}
+    error_groups = {}
     for group in group_nodes:
-        node_names = [f"{node['id']}: {node['score']:.3f}" for node in group['nodes']]
-        hover_text = (
-            f"Group: {group['group_label']}<br>"
-            f"Total Score: {group['total_score']:.3f}<br>"
-            f"Nodes:<br>" + "<br>".join(node_names)
-        )
         if group['is_error']:
-            error_x.append(group['x'])
-            error_y.append(group['y'])
-            error_text.append(hover_text)
-            error_total_scores.append(group['total_score'])
+            error_groups.setdefault(group['hook_point'], []).append(group)
         else:
-            normal_x.append(group['x'])
-            normal_y.append(group['y'])
-            normal_text.append(hover_text)
-            normal_total_scores.append(group['total_score'])
-
-    # Calculate the minimum x-value of all nodes
-    all_x_values = [group['x'] for group in group_nodes]
-    min_x_value = min(all_x_values)
-    max_x_value = max(all_x_values)
+            normal_groups.setdefault(group['hook_point'], []).append(group)
 
     # Create Plotly figure
     fig = go.Figure()
 
-    # Add normal groups as squares
-    fig.add_trace(go.Scatter(
-        x=normal_x,
-        y=normal_y,
-        mode='markers',
-        marker=dict(
-            symbol='square',
-            size=20,
-            color=normal_total_scores,  # Assign total_score for color mapping
-            colorscale='Blues',
-            cmin=min_total_score,
-            cmax=max_total_score,
-            showscale=False,  # Remove the colorbar
-            line=dict(width=1, color='Black')
-        ),
-        text=normal_text,
-        hoverinfo='text',
-        name='Normal Nodes'
-    ))
+    # Define symbols based on group size
+    def get_symbol(is_error, group_size):
+        if is_error:
+            return 'triangle-up'  # All error nodes use triangle
+        else:
+            return 'pentagon' if group_size > 1 else 'square'  # Group nodes: pentagon; single nodes: square
 
-    # Add error groups as triangles
+    # Add normal groups
+    for hook_point, groups in normal_groups.items():
+        if not groups:
+            continue
+        max_score = hook_point_max_scores[hook_point]
+        normalized_scores = [g['total_score'] / max_score for g in groups]
+        fig.add_trace(go.Scatter(
+            x=[g['x'] for g in groups],
+            y=[g['y'] for g in groups],
+            mode='markers',
+            marker=dict(
+                symbol=[get_symbol(False, len(g['nodes'])) for g in groups],
+                size=20,
+                color=normalized_scores,  # Normalized score for color mapping
+                colorscale=hook_point_colorscales[hook_point],
+                cmin=0,
+                cmax=1,
+                showscale=False,  # Remove the colorbar
+                line=dict(width=1, color='Black')
+            ),
+            text=[
+                (
+                    f"Hook Point: {g['hook_point']}<br>"
+                    f"Group: {g['group_label']}<br>"
+                    f"Total Score: {g['total_score']:.3f}<br>"
+                    f"Nodes:<br>" + "<br>".join([f"{node['id']}: {node['score']:.3f}" for node in g['nodes']])
+                )
+                for g in groups
+            ],
+            hoverinfo='text',
+            showlegend=False  # Hide from legend
+        ))
+
+    # Add error groups
+    for hook_point, groups in error_groups.items():
+        if not groups:
+            continue
+        max_score = hook_point_max_scores[hook_point]
+        normalized_scores = [g['total_score'] / max_score for g in groups]
+        fig.add_trace(go.Scatter(
+            x=[g['x'] for g in groups],
+            y=[g['y'] for g in groups],
+            mode='markers',
+            marker=dict(
+                symbol=[get_symbol(True, len(g['nodes'])) for g in groups],
+                size=20,
+                color=normalized_scores,  # Normalized score for color mapping
+                colorscale=hook_point_colorscales[hook_point],
+                cmin=0,
+                cmax=1,
+                showscale=False,  # Remove the colorbar
+                line=dict(width=1, color='Black')
+            ),
+            text=[
+                (
+                    f"Hook Point: {g['hook_point']}<br>"
+                    f"Group: {g['group_label']}<br>"
+                    f"Total Score: {g['total_score']:.3f}<br>"
+                    f"Nodes:<br>" + "<br>".join([f"{node['id']}: {node['score']:.3f}" for node in g['nodes']])
+                )
+                for g in groups
+            ],
+            hoverinfo='text',
+            showlegend=False  # Hide from legend
+        ))
+
+    # Create custom legend
+    # 1. Triangle for Error Nodes
     fig.add_trace(go.Scatter(
-        x=error_x,
-        y=error_y,
+        x=[None],
+        y=[None],
         mode='markers',
         marker=dict(
             symbol='triangle-up',
             size=20,
-            color=error_total_scores,  # Assign total_score for color mapping
-            colorscale='Reds',
-            cmin=min_total_score,
-            cmax=max_total_score,
-            showscale=False,  # Remove the colorbar
+            color='gray',  # Color is irrelevant for legend
             line=dict(width=1, color='Black')
         ),
-        text=error_text,
-        hoverinfo='text',
-        name='Error Nodes'
+        name='Error Nodes',
+        showlegend=True
     ))
 
+    # 2. Rectangle for Latent Nodes (single nodes)
+    fig.add_trace(go.Scatter(
+        x=[None],
+        y=[None],
+        mode='markers',
+        marker=dict(
+            symbol='square',
+            size=20,
+            color='gray',
+            line=dict(width=1, color='Black')
+        ),
+        name='Latent Nodes',
+        showlegend=True
+    ))
+
+    # 3. Pentagon for Group Nodes (multiple nodes)
+    fig.add_trace(go.Scatter(
+        x=[None],
+        y=[None],
+        mode='markers',
+        marker=dict(
+            symbol='pentagon',
+            size=20,
+            color='gray',
+            line=dict(width=1, color='Black')
+        ),
+        name='Group Nodes',
+        showlegend=True
+    ))
+
+    # Calculate the minimum and maximum x-values of all nodes
+    all_x_values = [group['x'] for group in group_nodes]
+    min_x_value = min(all_x_values) if all_x_values else -15
+    max_x_value = max(all_x_values) if all_x_values else 15
+
     # Adjust x-axis margins to prevent overlap
-    x_margin = 2  # Adjust this value as needed
+    x_margin = 2.5  # Adjust this value as needed
     x_range = [min_x_value - x_margin, max_x_value + x_margin]
 
     # Add vertical dotted lines for hook points
-    y_values = [group['y'] for group in group_nodes]
-    y_min = min(y_values) - layer_spacing
-    y_max = max(y_values) + layer_spacing
+    y_values = [group['y'] for group in group_nodes] if group_nodes else [0]
+    y_min = min(y_values) - layer_spacing if group_nodes else -layer_spacing
+    y_max = max(y_values) + layer_spacing if group_nodes else layer_spacing
     for hook_point, x in hook_point_columns.items():
         fig.add_shape(
             type='line',
@@ -416,7 +490,7 @@ def create_activation_visualization_plotly(data, K=10, group_padding=0.5, layer_
         ))
 
     # Add layer labels on y-axis
-    unique_layers = sorted(set(group['layer'] for group in group_nodes))
+    unique_layers = sorted(set(group['layer'] for group in group_nodes)) if group_nodes else []
     layer_labels = [f'Layer {layer}' for layer in unique_layers]
     layer_y = [layer * layer_spacing for layer in unique_layers]
 
@@ -557,116 +631,3 @@ pio.write_html(fig, file=output_file, auto_open=False)  # `auto_open=True` will 
 
 print(f"The interactive figure has been saved as {output_file}.")
 # %%
-# %%
-# ################ Version 2 ################
-#
-import networkx as nx
-import matplotlib.pyplot as plt
-import numpy as np
-
-def create_activation_visualization(data):
-    # Initialize dictionaries to store nodes by layer and hook_point
-    layer_hook_nodes = {}
-    all_nodes = []
-    
-    # Parse nodes and group them by layer and hook_point
-    for node_str, score in data:
-        layer = int(node_str.split('__')[0])
-        hook_point = node_str.split('__')[1]
-        node_id = node_str.split('__')[-1]
-        is_error = 'error' in node_str
-        node_info = {
-            'id': node_str,
-            'layer': layer,
-            'hook_point': hook_point,
-            'node_id': node_id,
-            'score': score,
-            'is_error': is_error
-        }
-        all_nodes.append(node_info)
-        
-        if layer not in layer_hook_nodes:
-            layer_hook_nodes[layer] = {'attn_z': [], 'mlp_out': [], 'resid_post': []}
-        layer_hook_nodes[layer][hook_point].append(node_info)
-
-    # Define column positions with wider spacing
-    hook_point_columns = {'attn_z': -12, 'mlp_out': 0, 'resid_post': 12}
-    layer_spacing = 2.0
-    node_spacing = 2.0  # Increased horizontal spacing between nodes
-
-    # Calculate positions
-    pos = {}
-    for layer in layer_hook_nodes:
-        for hook_point in hook_point_columns:
-            nodes = layer_hook_nodes[layer][hook_point]
-            if nodes:
-                base_x = hook_point_columns[hook_point]
-                # Calculate total width needed for this group
-                total_width = (len(nodes) - 1) * node_spacing
-                start_x = base_x - total_width / 2
-                
-                for idx, node in enumerate(nodes):
-                    x = start_x + idx * node_spacing
-                    y = layer * layer_spacing
-                    pos[node['id']] = (x, y)
-    
-    # Set up the plot with increased width
-    plt.figure(figsize=(30, 30))
-    
-    # Draw vertical dotted lines for columns
-    y_min = min(y for _, y in pos.values()) - 1
-    y_max = max(y for _, y in pos.values()) + 1
-    for x in hook_point_columns.values():
-        plt.vlines(x, y_min, y_max, colors='gray', linestyles=':', alpha=0.5)
-    
-    # Draw nodes
-    for node in all_nodes:
-        x, y = pos[node['id']]
-        
-        # Color based on score
-        color = (0, 0, node['score'])
-        
-        if node['is_error']:
-            # Draw triangle for errors
-            triangle = plt.Polygon([(x, y+0.3), (x-0.3, y-0.3), (x+0.3, y-0.3)],
-                                 facecolor=color, edgecolor='black')
-            plt.gca().add_patch(triangle)
-        else:
-            # Draw rectangle for normal nodes
-            rect = plt.Rectangle((x-0.4, y-0.3), 0.8, 0.6,
-                               facecolor=color, edgecolor='black')
-            plt.gca().add_patch(rect)
-        
-        # Add text
-        label = f"{node['node_id']}\n{node['score']:.3f}"
-        plt.text(x, y, label, horizontalalignment='center',
-                verticalalignment='center', color='white',
-                fontsize=6)
-    
-    # Add column labels at the top
-    for hook_point, x in hook_point_columns.items():
-        plt.text(x, y_max + 0.5, hook_point,
-                horizontalalignment='center', fontsize=12)
-    
-    # Increase the x-axis limits to prevent crowding
-    x_min = min(x for x, y in pos.values()) - 4
-    x_max = max(x for x, y in pos.values()) + 4
-    plt.xlim(x_min, x_max)
-    plt.ylim(y_min, y_max)
-    
-    # Add layer labels on the left
-    unique_layers = sorted(set(node['layer'] for node in all_nodes))
-    plt.yticks([layer * layer_spacing for layer in unique_layers],
-               [f'Layer {layer}' for layer in unique_layers])
-    
-    plt.grid(False)
-    plt.axis('on')
-    plt.title('Node Activation Map', pad=20, fontsize=16)
-    
-    return plt
-
-# data = truthful_nodes_scores
-
-# plt = create_activation_visualization(data)
-# plt.tight_layout()
-# plt.show()
