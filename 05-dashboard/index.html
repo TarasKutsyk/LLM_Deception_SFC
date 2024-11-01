@@ -93,10 +93,25 @@
             padding-top: 56.25%; /* 16:9 aspect ratio */
             overflow: hidden;
         }
-
+        .iframe-container-rectangle-small {
+            position: relative;
+            width: 100%;
+            height: 50%;
+            padding-top: 25%; /* 16:9 aspect ratio */
+            overflow: hidden;
+        }
+        .iframe-container-rectangle-large {
+            position: relative;
+            width: 100%;
+            height: 130%;
+            padding-top: 80%; /* 16:9 aspect ratio */
+            overflow: hidden;
+        }
         .iframe-container-large iframe,
         .iframe-container-small iframe,
-        .iframe-container-rectangle iframe {
+        .iframe-container-rectangle iframe,
+        .iframe-container-rectangle-small iframe,
+        .iframe-container-rectangle-large iframe {
             position: absolute;
             top: 0;
             left: 0;
@@ -133,7 +148,7 @@
         <h1>Analysis Dashboard</h1>
 
         <!-- First row with two large plots -->
-        <h2 class="section-header" id="main-analysis">Main Analysis</h2>
+        <h2 class="section-header" id="main-analysis">SFC Global Analysis</h2>
         <div class="row">
             <div class="grid-2-col">
                 <!-- Truthful Nodes Panel -->
@@ -156,41 +171,6 @@
                 </div>
 
 
-            </div>
-        </div>
-
-        <!-- Second row with three smaller plots -->
-        <h2 class="section-header" id="additional-metrics">Supporting Metrics</h2>
-        <div class="row">
-            <div class="grid-3-col">
-                <!-- Additional Plot 1 -->
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2 class="panel-title">Additional Plot 1</h2>
-                    </div>
-                    <div class="iframe-container-small">
-                        <iframe src="additional_plot1.html" title="Additional Plot 1"></iframe>
-                    </div>
-                </div>
-
-                <!-- Additional Plot 2 -->
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2 class="panel-title">Additional Plot 2</h2>
-                    </div>
-                    <div class="iframe-container-small">
-                        <iframe src="additional_plot2.html" title="Additional Plot 2"></iframe>
-                    </div>
-                </div>
-                <!-- Additional Plot 3 -->
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2 class="panel-title">Threshold Ration Analsis</h2>
-                    </div>
-                    <div class="iframe-container-small">
-                        <iframe src="sfc_analysis/threshold_component_ratios_visualization_01_04.html" title="Additional Plot 3"></iframe>
-                    </div>
-                </div>          
             </div>
         </div>
 
@@ -231,6 +211,100 @@
               </div>
           </div>
 
+            <!-- Abliation Analysis - High Level -->
+            <h2 class="section-header" id="neuronpedia">Ablation analysis - High Level</h2>
+            <div class="row">
+                <div class="grid-2-col">
+                    <!-- Additional Plot 1 -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Items related to truth / clean</h2>
+                        </div>
+                        <div class="iframe-container-rectangle-large">
+                            <iframe src="ablation_Clean_setting.html" title="Ablation analysis global - Clean setting"></iframe>
+                        </div>
+                    </div>
+
+                    <!-- Additional Plot 2 -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Items related to false information / corrupted</h2>
+                        </div>
+                        <div class="iframe-container-rectangle-large">
+                            <iframe src="ablation_Corrupted_setting.html" title="Ablation analysis global - Corrupted setting"></iframe>
+                        </div>
+                    </div>
+
+            </div>
+
+            <!-- Abliation Analysis - Single Prompt -->
+            <h2 class="section-header" id="neuronpedia">Ablation analysis - Single Prompt</h2>
+            <div class="row">
+                <div class="grid-2-col">
+                    <!-- Additional Plot 1 -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Items related to truth / clean</h2>
+                        </div>
+                        <div class="iframe-container-rectangle">
+                            <iframe src="ablation_results_clean_index_464.html" title="Ablation analysis Single Prompt 464 - Clean setting"></iframe>
+                        </div>
+                    </div>
+
+                    <!-- Additional Plot 2 -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Items related to false information / corrupted</h2>
+                        </div>
+                        <div class="iframe-container-rectangle">
+                            <iframe src="ablation_results_corrupted_index_464.html" title="Ablation analysis Single Prompt 464 - Corrupted setting"></iframe>
+                        </div>
+                    </div>
+
+            </div>
+
+            <!-- Token Level Analysis - High Level -->
+            <h2 class="section-header" id="neuronpedia">Token Level Analysis - High Level</h2>
+            <div class="row">
+                <div class="grid-2-col">
+                    <!-- Additional Plot 1 -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Items related to truth / clean</h2>
+                        </div>
+                        <div class="iframe-container-rectangle">
+                            <iframe src="token_level_nodes_clean.html" title="Token Level Nodes Clean"></iframe>
+                        </div>
+                    </div>
+
+                    <!-- Additional Plot 2 -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Items related to false information / corrupted</h2>
+                        </div>
+                        <div class="iframe-container-rectangle">
+                            <iframe src="token_level_nodes_corrupted.html" title="Token Level Nodes Corrupted"></iframe>
+                        </div>
+                    </div>
+
+            </div>
+
+            <!-- Token Level Analysis - Detailed Level -->
+            <h2 class="section-header" id="neuronpedia">Token Level Analysis - Detailed Level</h2>
+            <div class="row">
+                <div class="grid-1-col">
+                    <!-- Additional Plot 1 -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Killed 27 - Killed 27</h2>
+                        </div>
+                        <div class="iframe-container-rectangle-small">
+                            <iframe src="killed_27_killed_27_nodes.html" title="Killed 27 - Killed 27"></iframe>
+                        </div>
+                    </div>
+
+            </div>
+
             <!-- Third row with three smaller plots -->
             <h2 class="section-header" id="neuronpedia">Neuronpedia</h2>
             <div class="row">
@@ -256,6 +330,44 @@
                     </div>
   
             </div>
+
+
+        <!-- Second row with three smaller plots -->
+        <h2 class="section-header" id="additional-metrics">Supporting Metrics</h2>
+        <div class="row">
+            <div class="grid-3-col">
+                <!-- Additional Plot 3 -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Threshold Ration Analsis</h2>
+                    </div>
+                    <div class="iframe-container-small">
+                        <iframe src="sfc_analysis/threshold_component_ratios_visualization_01_04.html" title="Additional Plot 3"></iframe>
+                    </div>
+                </div>  
+                <!-- Additional Plot 1 -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Additional Plot 1</h2>
+                    </div>
+                    <div class="iframe-container-small">
+                        <iframe src="additional_plot1.html" title="Additional Plot 1"></iframe>
+                    </div>
+                </div>
+
+                <!-- Additional Plot 2 -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Additional Plot 2</h2>
+                    </div>
+                    <div class="iframe-container-small">
+                        <iframe src="additional_plot2.html" title="Additional Plot 2"></iframe>
+                    </div>
+                </div>
+        
+            </div>
+        </div>
+
     </div>
 </body>
 </html>
