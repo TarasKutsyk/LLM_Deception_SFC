@@ -541,7 +541,7 @@ def create_activation_visualization_plotly(data, K=10, group_padding=0.5, layer_
 
 # %%
 aggregation_type = AttributionAggregation.ALL_TOKENS
-THRESHOLD = 0.02
+THRESHOLD = 0.01
 NODES_PREFIX = ''# 'resid_saes_128k'
 
 def get_nodes_fname(truthful_nodes=True, nodes_prefix=NODES_PREFIX):
@@ -606,7 +606,7 @@ deceptive_nodes_scores = load_dict(deceptive_nodes_fname)
 deceptive_nodes_scores.keys()
 
 # %%
-THRESHOLD=0.02
+THRESHOLD=0.01
 
 deceptive_nodes_scores, total_components = get_contributing_components(deceptive_nodes_scores, THRESHOLD)
 print(f"Total contributing components: {total_components}")
