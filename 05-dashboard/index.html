@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deceptions Analysis with SAE Encoders - Taras & Sigurd</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        /* Dashboard container */
+        .dashboard {
+            width: 100%;
+            max-width: 2400px;
+            margin: 0 auto;
+        }
+
+        /* Grid layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        /* Panel styling */
+        .panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px;
+        }
+
+        .panel-header {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* iframe container with aspect ratio */
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            padding-top: 241.67%; /* 2900px/1200px = 241.67% */
+            overflow: hidden;
+        }
+
+        .iframe-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>Deceptions Analysis with SAE Encoders - Taras & Sigurd</h1>
+        <br><br>
+
+        <h2>SFC Important Nodes</h2>
+        <div class="grid">
+            <!-- Deceptive Threshold Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Deceptive Threshold Analysis</h2>
+                </div>
+                <div class="iframe-container">
+                    <iframe src="deceptive__threshold_0.02_percentile_20.html" title="Deceptive Threshold Analysis"></iframe>
+                </div>
+            </div>
+
+            <!-- Truthful Nodes Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Truthful Nodes Analysis</h2>
+                </div>
+                <div class="iframe-container">
+                    <iframe src="truthful_nodes__threshold_0.02_percentile_20.html" title="Truthful Nodes Analysis"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

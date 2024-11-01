@@ -164,7 +164,7 @@ def run_ablation_analysis(
     
     # Get baseline logits
     baseline_logits = model(input_tokens)
-    baseline_logits = baseline_logits[0, -1, watch_token_ids]  # Only get logits for watched tokens
+    baseline_logits = baseline_logits[0, last_real_token_pos, watch_token_ids]  # Only get logits for watched tokens
     results = []
     
     
