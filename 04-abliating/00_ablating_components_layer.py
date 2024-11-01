@@ -101,7 +101,8 @@ print(test_dataset[3][0])
 
 
 # %%
-
+print(model.to_string(test_dataset[0][index]))
+print(model.to_string(test_dataset[1][index]))
 
 # %%
 
