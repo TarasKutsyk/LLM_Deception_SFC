@@ -87,8 +87,16 @@
             overflow: hidden;
         }
 
+        .iframe-container-rectangle {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 aspect ratio */
+            overflow: hidden;
+        }
+
         .iframe-container-large iframe,
-        .iframe-container-small iframe {
+        .iframe-container-small iframe,
+        .iframe-container-rectangle iframe {
             position: absolute;
             top: 0;
             left: 0;
@@ -125,35 +133,36 @@
         <h1>Analysis Dashboard</h1>
 
         <!-- First row with two large plots -->
-        <h2 class="section-header">Main Analysis</h2>
+        <h2 class="section-header" id="main-analysis">Main Analysis</h2>
         <div class="row">
             <div class="grid-2-col">
-                <!-- Deceptive Threshold Panel -->
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2 class="panel-title">Deceptive Threshold Analysis</h2>
-                    </div>
-                    <div class="iframe-container-large">
-                        <iframe src="deceptive__threshold_0.02_percentile_20.html" title="Deceptive Threshold Analysis"></iframe>
-                    </div>
-                </div>
-
                 <!-- Truthful Nodes Panel -->
                 <div class="panel">
                     <div class="panel-header">
                         <h2 class="panel-title">Truthful Nodes Analysis</h2>
                     </div>
                     <div class="iframe-container-large">
-                        <iframe src="truthful_nodes__threshold_0.02_percentile_20.html" title="Truthful Nodes Analysis"></iframe>
+                        <iframe src="sfc_analysis/truthful_nodes__threshold_0.02_percentile_20.html" title="Truthful Nodes Analysis"></iframe>
                     </div>
                 </div>
+                <!-- Deceptive Threshold Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Deceptive Threshold Analysis</h2>
+                    </div>
+                    <div class="iframe-container-large">
+                        <iframe src="sfc_analysis/deceptive__threshold_0.02_percentile_20.html" title="Deceptive Threshold Analysis"></iframe>
+                    </div>
+                </div>
+
+
             </div>
         </div>
 
         <!-- Second row with three smaller plots -->
-        <h2 class="section-header">Additional Metrics</h2>
+        <h2 class="section-header" id="additional-metrics">Supporting Metrics</h2>
         <div class="row">
-            <div class="grid-4-col">
+            <div class="grid-3-col">
                 <!-- Additional Plot 1 -->
                 <div class="panel">
                     <div class="panel-header">
@@ -176,25 +185,54 @@
                 <!-- Additional Plot 3 -->
                 <div class="panel">
                     <div class="panel-header">
-                        <h2 class="panel-title">Additional Plot 3</h2>
+                        <h2 class="panel-title">Threshold Ration Analsis</h2>
                     </div>
                     <div class="iframe-container-small">
-                        <iframe src="additional_plot3.html" title="Additional Plot 3"></iframe>
-                    </div>
-                </div>
-                <!-- Additional Plot 4 -->
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2 class="panel-title">Additional Plot 3</h2>
-                    </div>
-                    <div class="iframe-container-small">
-                        <iframe src="additional_plot3.html" title="Additional Plot 3"></iframe>
+                        <iframe src="sfc_analysis/threshold_component_ratios_visualization_01_04.html" title="Additional Plot 3"></iframe>
                     </div>
                 </div>          
             </div>
         </div>
+
+
+          <!-- LogitLens row with three smaller plots -->
+          <h2 class="section-header" id="logitlens">LogitLens - Entropy, KL-divergence, and target probability</h2>
+          <div class="row">
+              <div class="grid-3-col">
+                  <!-- Additional Plot 1 -->
+                  <div class="panel">
+                      <div class="panel-header">
+                          <h2 class="panel-title">Entropy</h2>
+                      </div>
+                      <div class="iframe-container-rectangle">
+                          <iframe src="logitlens/entropy_comparison_gemma_2_9b_run.html" title="Additional Plot 1"></iframe>
+                      </div>
+                  </div>
+  
+                  <!-- Additional Plot 2 -->
+                  <div class="panel">
+                      <div class="panel-header">
+                          <h2 class="panel-title">KL-divergence</h2>
+                      </div>
+                      <div class="iframe-container-rectangle">
+                          <iframe src="logitlens/kl_divergence_comparison_gemma_2_9b_run.html" title="Additional Plot 2"></iframe>
+                      </div>
+                  </div>
+                  <!-- Additional Plot 3 -->
+                  <div class="panel">
+                      <div class="panel-header">
+                          <h2 class="panel-title">Target probability</h2>
+                      </div>
+                      <div class="iframe-container-rectangle">
+                          <iframe src="logitlens/target_probability_comparison_gemma_2_9b_run.html" title="Additional Plot 3"></iframe>
+                      </div>
+                  </div>
+        
+              </div>
+          </div>
+
             <!-- Third row with three smaller plots -->
-            <h2 class="section-header">Neuronpedia</h2>
+            <h2 class="section-header" id="neuronpedia">Neuronpedia</h2>
             <div class="row">
                 <div class="grid-2-col">
                     <!-- Additional Plot 1 -->

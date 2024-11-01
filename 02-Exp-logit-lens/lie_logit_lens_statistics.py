@@ -335,7 +335,9 @@ class AnalysisVisualizer:
                              title: Optional[str] = None,
                              scale: str = 'linear',
                              save_path: Optional[str] = None):
-        """Plot comparison of metrics between truth and lie conditions"""
+        """Plot comparison of metrics between truth and lie conditions using Plotly"""
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
         
         # Extract metrics for all layers
         def extract_metric(results, metric_name):
@@ -355,31 +357,68 @@ class AnalysisVisualizer:
         lie_q25 = np.percentile(lie_values, 25, axis=0)
         lie_q75 = np.percentile(lie_values, 75, axis=0)
         
-        # Create plot
-        plt.figure(figsize=(10, 6))
-        x = np.arange(len(truth_median))
+        # Create x-axis values
+        x = list(range(len(truth_median)))
         
-        plt.plot(x, truth_median, color='blue', label='truth median')
-        plt.fill_between(x, truth_q25, truth_q75, color='blue', alpha=0.2)
+        # Create figure
+        fig = go.Figure()
         
-        plt.plot(x, lie_median, color='orange', label='lie median')
-        plt.fill_between(x, lie_q25, lie_q75, color='orange', alpha=0.2)
+        # Add truth traces
+        fig.add_trace(go.Scatter(
+            x=x,
+            y=truth_median,
+            line=dict(color='blue'),
+            name='Truth Median'
+        ))
         
-        plt.xlabel('Layer')
-        plt.ylabel(metric_name.replace('_', ' ').title())
-        if scale == 'log':
-            plt.yscale('log')
+        fig.add_trace(go.Scatter(
+            x=x + x[::-1],
+            y=list(truth_q75) + list(truth_q25)[::-1],
+            fill='toself',
+            fillcolor='rgba(0,0,255,0.2)',
+            line=dict(color='rgba(255,255,255,0)'),
+            name='Truth 25-75 Percentile'
+        ))
         
-        plt.grid(True)
-        plt.legend()
+        # Add lie traces
+        fig.add_trace(go.Scatter(
+            x=x,
+            y=lie_median,
+            line=dict(color='orange'),
+            name='Lie Median'
+        ))
         
-        if title:
-            plt.title(title)
+        fig.add_trace(go.Scatter(
+            x=x + x[::-1],
+            y=list(lie_q75) + list(lie_q25)[::-1],
+            fill='toself',
+            fillcolor='rgba(255,165,0,0.2)',
+            line=dict(color='rgba(255,255,255,0)'),
+            name='Lie 25-75 Percentile'
+        ))
         
+        # Update layout
+        fig.update_layout(
+            title=title,
+            xaxis_title='Layer',
+            yaxis_title=metric_name.replace('_', ' ').title(),
+            yaxis_type='log' if scale == 'log' else 'linear',
+            hovermode='x unified',
+            showlegend=True,
+            template='plotly_white'
+        )
+        
+        # Add grid
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGray')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGray')
+        
+        # Save to HTML if path provided
         if save_path:
-            plt.savefig(save_path)
-        plt.show()
+            html_path = save_path.rsplit('.', 1)[0] + '.html'
+            fig.write_html(html_path)
         
+        # Display the plot
+        fig.show()
 
 
 
@@ -487,7 +526,7 @@ def run_analysis_and_visualize(model_name: str, model: HookedTransformer, datase
     visualizer = AnalysisVisualizer()
     
     # Common title prefix
-    title_prefix = f"{model_name} - {dataset_name} - {num_samples//2} {question_type} Questions (Truth & Lie)"
+    title_prefix = f"{model_name} - {dataset_name} - (Truth & Lie)"
 
     visualizer.plot_metric_comparison(
         [r for r in results if r.prompt_type == 'truth'],
@@ -516,23 +555,23 @@ def run_analysis_and_visualize(model_name: str, model: HookedTransformer, datase
         title=f"Probability of predicted token - {title_prefix}"
     )
 
-# run_analysis_and_visualize(
-#     model_name="google/gemma-2-9b-it",
-#     dataset_name="drsis/deception-commonsense_qa_wo_chat",
-#     num_samples=20,  # This will create 10 truth and 10 lie samples
-#     run_name="gemma_2_9b_test_run",
-#     model=model,
-#     question_type='mc'
-# )
-
 run_analysis_and_visualize(
     model_name="google/gemma-2-9b-it",
-    dataset_name="L1Fthrasir/Companies-true-false",
-    num_samples=40,  # This will create x truth and x lie samples
-    run_name="gemma_2_9b_it_tf_com_companies",
+    dataset_name="drsis/deception-commonsense_qa_wo_chat",
+    num_samples=20,  # This will create 10 truth and 10 lie samples
+    run_name="gemma_2_9b_run",
     model=model,
-    question_type='binary',
-    field_name='statement'
+    question_type='mc'
 )
+
+# run_analysis_and_visualize(
+#     model_name="google/gemma-2-9b-it",
+#     dataset_name="L1Fthrasir/Companies-true-false",
+#     num_samples=40,  # This will create x truth and x lie samples
+#     run_name="gemma_2_9b_it_tf_com_companies",
+#     model=model,
+#     question_type='binary',
+#     field_name='statement'
+# )
 
 # %%

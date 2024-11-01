@@ -297,7 +297,7 @@ results_df = run_ablation_analysis(model, example_prompt, tokens_to_watch, last_
 # %%
 fig = plot_ablation_results(results_df, tokens_to_watch, type_text=type_text)
 fig.show()
-#fig.write_html(f"ablation_results_clean_index_{original_index}.html")
+fig.write_html(f"ablation_results_clean_index_{original_index}.html")
 
 # %%
 
