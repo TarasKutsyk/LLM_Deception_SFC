@@ -40,8 +40,6 @@ def clear_cache():
     gc.collect()
     torch.cuda.empty_cache()
 
-# %%
-(2 * 16 * 3000 * 16000 * 2 * 42 + 16 * 3000 * 131000 * 2 * 42) / 8589934592
 
 # %%
 from pathlib import Path
