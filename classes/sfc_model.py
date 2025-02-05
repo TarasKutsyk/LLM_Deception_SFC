@@ -46,7 +46,7 @@ def sample_dataset(start_idx=0, end_idx=-1, clean_dataset=None, corrupted_datase
 class SFC_Gemma():
     def __init__(self, model, attach_saes=True, params_count=9, control_seq_len=1, caching_device=None,
                 sae_resid_release=None, sae_attn_release=None, sae_mlp_release=None,
-                sae_attn_width='16k', sae_mlp_width='16k', first_16k_resid_layers=20):
+                sae_attn_width='16k', sae_mlp_width='16k', first_16k_resid_layers=None):
         if sae_resid_release is None:
             sae_resid_release = f'gemma-scope-{params_count}b-pt-res-canonical'
 
@@ -62,7 +62,8 @@ class SFC_Gemma():
         self.caching_device = caching_device
         self.control_seq_len = control_seq_len
 
-        self.model.set_use_attn_in(True)
+        if params_count == 9:
+            self.model.set_use_attn_in(True)
         self.model.set_use_attn_result(True)
         self.model.set_use_hook_mlp_in(True)
         self.model.set_use_split_qkv_input(True)
@@ -79,10 +80,14 @@ class SFC_Gemma():
         self.attn_d_sae = width_to_d_sae(sae_attn_width)
         self.mlp_d_sae = width_to_d_sae(sae_mlp_width)
 
-        # We're using 16k resid SAEs for the first `first_16k_resid_layers`, and 131k resid SAEs for the rest
+
+        if first_16k_resid_layers is None:
+            first_16k_resid_layers = self.n_layers
+
+        print(f'Using 16K SAEs for the first {first_16k_resid_layers} layers, the rest {self.n_layers - first_16k_resid_layers} layer(s) - 131k SAEs')
         resid_saes_widths = ['16k'] * first_16k_resid_layers + ['131k'] * (self.n_layers - first_16k_resid_layers)
+
         self.resid_d_sae = [width_to_d_sae(width) for width in resid_saes_widths]
-        print(f'Resid SAEs widths: {resid_saes_widths}')
 
         # Initialize dictionary to store SAEs by type: resid, attn, mlp
         self.saes_dict = {
@@ -266,6 +271,93 @@ class SFC_Gemma():
             node_scores
         )
 
+    def get_component_cache(self, clean_dataset, patched_dataset, batch_size=50, total_batches=None, component='attn'):
+        n_prompts, seq_len = clean_dataset['prompt'].shape
+        assert n_prompts == clean_dataset['answer'].shape[0] == patched_dataset['answer'].shape[0]
+
+        prompts_to_process = n_prompts if total_batches is None else batch_size * total_batches
+
+        if total_batches is None:
+            total_batches = n_prompts // batch_size
+
+            if n_prompts % batch_size != 0:
+                total_batches += 1
+
+        metrics_clean_scores = []
+        metrics_patched = []
+
+        all_attn_contribution = torch.zeros((seq_len,), device=self.device)
+        all_attn_attribution = torch.zeros((seq_len,), device=self.device)
+        all_attn_attr_patching = torch.zeros((seq_len,), device=self.device)
+        
+        fwd_cache_filter = lambda name: f'{component}_out' in name
+        bwd_cache_filter = lambda name: f'{component}_out' in name
+
+        def init_attn_scores(cache):
+            scores_dict = {}
+
+            for key, cache_tensor in cache.items():
+                batch, pos, _ = cache_tensor.shape
+                scores_dict[key] =  {
+                                        f'{component}_contribution': torch.zeros((pos), dtype=torch.bfloat16, device=self.caching_device),
+                                        f'{component}_attribution': torch.zeros((pos), dtype=torch.bfloat16, device=self.caching_device),
+                                        f'{component}_attr_patching': torch.zeros((pos), dtype=torch.bfloat16, device=self.caching_device),
+                                    }
+
+            return scores_dict
+        
+        def update_scores(attn_scores, cache_clean, grad_clean, cache_patched):
+            assert cache_clean.keys() == grad_clean.keys() == cache_patched.keys()
+            
+            # We'll compute the following scores for each of the attention layers (i.e. for each key in the cache):
+            # - attn_contribution = norm of the attn_out vector
+            # - attn_attribution = norm of the gradient of the attn_out vector
+            # - attn_attr_patching = attention gradient multiplied by the difference of activations (as in AtP/IG)
+            for key in cache_clean.keys():
+                # cache_clean, grad_clean, cache_patched is of shape [batch, pos, d_model] now
+                attn_contribution = cache_clean[key].norm(dim=-1)
+                attn_attribution = grad_clean[key].norm(dim=-1)
+                attn_attr_patching = einops.einsum(grad_clean[key], cache_patched[key] - cache_clean[key],
+                                                'batch pos d_model, batch pos d_model -> batch pos')
+
+                # Reduce the scores to compute the mean across batches
+                attn_contribution = attn_contribution.mean(0)
+                attn_attribution = attn_attribution.mean(0)
+                attn_attr_patching = attn_attr_patching.mean(0)
+
+                # Accumulate the scores
+                attn_scores[key][f'{component}_contribution'] += attn_contribution / total_batches
+                attn_scores[key][f'{component}_attribution'] += attn_attribution / total_batches
+                attn_scores[key][f'{component}_attr_patching'] += attn_attr_patching / total_batches
+
+        for i in tqdm(range(0, prompts_to_process, batch_size)):
+            clean_prompts, corrupted_prompts, clean_answers, corrupted_answers, clean_answers_pos, corrupted_answers_pos, \
+            clean_attn_mask, corrupted_attn_mask = sample_dataset(i, i + batch_size, clean_dataset, patched_dataset)
+
+            metric_clean = lambda logits: self.get_logit_diff(logits, clean_answers, corrupted_answers, clean_answers_pos).mean()
+            metric_patched = lambda logits: self.get_logit_diff(logits, clean_answers, corrupted_answers, corrupted_answers_pos).mean()
+
+            metric_clean, cache_clean, grad_clean = self.run_with_cache(clean_prompts, clean_attn_mask, metric_clean, 
+                                                                        fwd_cache_filter=fwd_cache_filter, bwd_cache_filter=bwd_cache_filter,
+                                                                        run_without_saes=True)
+
+            metric_patched, cache_patched, _ = self.run_with_cache(corrupted_prompts, corrupted_attn_mask, metric_patched, 
+                                                                   fwd_cache_filter=fwd_cache_filter, run_backward_pass=False, 
+                                                                   run_without_saes=True)
+
+            metrics_clean_scores.append(metric_clean)
+            metrics_patched.append(metric_patched)
+
+            if i == 0:
+                attn_scores = init_attn_scores(cache_clean)
+
+            update_scores(attn_scores, cache_clean, grad_clean, cache_patched)
+                
+            del cache_clean, cache_patched, grad_clean
+            clear_cache()
+
+        return attn_scores
+
     def run_with_cache(self, tokens: Int[Tensor, "batch pos"],
                        attn_mask: Int[Tensor, "batch pos"], metric,
                        fwd_cache_filter=None, bwd_cache_filter=None, run_backward_pass=True, run_without_saes=False):
@@ -292,7 +384,7 @@ class SFC_Gemma():
 
         try:
             if run_backward_pass:
-                self._set_backward_hooks(grad_cache, bwd_cache_filter, run_without_saes)
+                self._set_backward_hooks(grad_cache, bwd_cache_filter, compute_grad_analytically=run_without_saes)
 
                 # Enable gradients only during the backward pass
                 with torch.set_grad_enabled(True):
@@ -535,7 +627,7 @@ class SFC_Gemma():
         # clean_answers_pos_idx = clean_answers_pos.unsqueeze(-1).unsqueeze(-1).expand(-1, logits.size(1), logits.size(2))
 
         answer_pos_idx = einops.repeat(ansnwer_pos, 'batch -> batch 1 d_vocab',
-                                        d_vocab=logits.shape[-1])
+                                       d_vocab=logits.shape[-1])
         answer_logits = logits.gather(1, answer_pos_idx).squeeze(1) # shape [batch, d_vocab]
 
         correct_logits = answer_logits.gather(1, clean_answers.unsqueeze(1)).squeeze(1) # shape [batch]
