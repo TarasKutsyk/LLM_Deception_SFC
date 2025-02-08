@@ -76,10 +76,8 @@ class SFC_Gemma():
             '16k': 16384
         }[width]
 
-        
         self.attn_d_sae = width_to_d_sae(sae_attn_width)
         self.mlp_d_sae = width_to_d_sae(sae_mlp_width)
-
 
         if first_16k_resid_layers is None:
             first_16k_resid_layers = self.n_layers
@@ -286,10 +284,6 @@ class SFC_Gemma():
         metrics_clean_scores = []
         metrics_patched = []
 
-        all_attn_contribution = torch.zeros((seq_len,), device=self.device)
-        all_attn_attribution = torch.zeros((seq_len,), device=self.device)
-        all_attn_attr_patching = torch.zeros((seq_len,), device=self.device)
-        
         fwd_cache_filter = lambda name: f'{component}_out' in name
         bwd_cache_filter = lambda name: f'{component}_out' in name
 
@@ -725,6 +719,39 @@ class SFC_Gemma():
     def add_saes(self):
         for sae in self.saes:
             self.model.add_sae(sae, use_error_term=True)
+
+    def detach_saes_except_few(self, act_names_for_which_to_keep_saes, discard_saes=True):
+        self.model.reset_saes()
+        assert not self.are_saes_attached(), 'SAEs are not detached from the model.'
+
+        original_saes_count = len(self.saes)
+        # Now only load SAEs for the specified act names
+        self.saes = []
+
+        for act_name in act_names_for_which_to_keep_saes:
+            try:
+                sae = self.get_sae_by_hook_name(act_name)
+            except ValueError as e:
+                print(f'Skipping the act name {act_name} because there\'s no SAE for it. Consider reinitializing the SFC_Gemma object.')
+                continue
+
+            self.model.add_sae(sae, use_error_term=True)
+            self.saes.append(sae)
+
+        new_saes_count = len(self.saes)
+        print(f'Detached {original_saes_count - new_saes_count} SAEs from the model.')
+
+        # Discard the remaining SAEs from memory
+        if discard_saes:
+            try:
+                del self.saes_dict
+            except AttributeError:
+                pass
+            finally:
+                clear_cache()
+                print('Discarded the remaining SAEs from memory.')
+
+        assert self.are_saes_attached(), 'SAEs should be attached to the model.'
 
     def print_saes(self):
         if not self.are_saes_attached():
